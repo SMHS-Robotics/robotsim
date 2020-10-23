@@ -1,7 +1,5 @@
 import kotlinx.coroutines.*
-import kotlin.math.cos
-import kotlin.math.pow
-import kotlin.math.sin
+import kotlin.math.*
 
 class SimulatorBot : BotAPI() {
     private var coroutine: Job? = null
@@ -82,7 +80,7 @@ class SimulatorBot : BotAPI() {
     private fun setAccelFromPower() {
         // How fast each side of the robot is moving
         val leftLinearVelocity = maxVelocity * leftMotorPower * Math.PI * wheelRadius * 2 / 360
-        val rightLinearVelocity = maxVelocity * rightMotorPower  * Math.PI * wheelRadius * 2 / 360
+        val rightLinearVelocity = maxVelocity * rightMotorPower * Math.PI * wheelRadius * 2 / 360
 
         if (leftLinearVelocity == rightLinearVelocity) {
             // If velocity is the same, no rotation, so we'll just go straight
@@ -90,8 +88,19 @@ class SimulatorBot : BotAPI() {
             adjustAngleFromLinearVelocity(0.0, false);
         } else {
             val isTurningLeft = rightLinearVelocity > leftLinearVelocity;
-            // Take the velocity that is "common" among both as linear...
-            this.linearVelocity = (if (isTurningLeft) leftLinearVelocity else rightLinearVelocity) / massOfRobot
+            val differenceBetween = abs(leftLinearVelocity - rightLinearVelocity)
+            // Take the velocity that is "common" among both as linear velocity, unless one is opposite direction,
+            // in which case we assume that the robot has no linear
+            this.linearVelocity =
+                (if (differenceBetween < max(abs(leftLinearVelocity), abs(rightLinearVelocity))) {
+                    if (isTurningLeft) {
+                        leftLinearVelocity
+                    } else {
+                        rightLinearVelocity
+                    }
+                } else {
+                    0.0
+                }) / massOfRobot
             // ...and use the rest as angular velocity.
             adjustAngleFromLinearVelocity(
                 if (isTurningLeft) {
