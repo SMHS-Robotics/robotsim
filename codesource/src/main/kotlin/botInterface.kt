@@ -17,18 +17,6 @@ abstract class BotAPI {
     var rightMotorPower: Double = 0.0
 
     /**
-     * Power of the right front motor.
-     * Accepts values between -1.0 (full speed backward) and 1.0 (full speed forward).
-     */
-    var rightRearMotorPower: Double = 0.0
-
-    /**
-     * Power of the right front motor.
-     * Accepts values between -1.0 (full speed backward) and 1.0 (full speed forward).
-     */
-    var leftRearMotorPower: Double = 0.0
-
-    /**
      * Current angle.
      * Vertical pointed up is 0.
      * Horizontal pointed left is 270.
@@ -42,12 +30,8 @@ abstract class BotAPI {
      *
      * @param leftFront The power of the front left motor, between -1.0 and 1.0
      * @param rightFront The power of the front right motor, between -1.0 and 1.0
-     * @param leftBack The power of the back left motor, between -1.0 and 1.0
-     * @param rightBack The power of the back right motor, between -1.0 and 1.0
      */
-    fun runMotors(leftFront: Double, rightFront: Double, leftBack: Double, rightBack: Double) {
-        leftRearMotorPower = leftBack
-        rightRearMotorPower = rightBack
+    fun runMotors(leftFront: Double, rightFront: Double) {
         leftMotorPower = leftFront
         rightMotorPower = rightFront
     }
