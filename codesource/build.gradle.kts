@@ -11,6 +11,7 @@ repositories {
     mavenCentral()
 }
 dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.0-M1")
     testImplementation(kotlin("test-junit"))
 }
 tasks.withType<KotlinCompile>() {
