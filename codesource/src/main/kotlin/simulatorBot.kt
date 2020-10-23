@@ -1,5 +1,7 @@
 import kotlinx.coroutines.*
+import kotlin.math.cos
 import kotlin.math.pow
+import kotlin.math.sin
 
 class SimulatorBot : BotAPI() {
     private var coroutine: Job? = null
@@ -9,9 +11,6 @@ class SimulatorBot : BotAPI() {
     // ---
 
 
-    // In m / sec^2
-    private var linearAcceleration: Double = 0.0
-
     // In m / sec
     private var linearVelocity: Double = 0.0
 
@@ -20,8 +19,6 @@ class SimulatorBot : BotAPI() {
 
     // In m
     private var yPos: Double = 0.0
-
-    private var angularAcceleration = 0.0
 
     private var angularVelocity = 0.0
 
@@ -42,8 +39,9 @@ class SimulatorBot : BotAPI() {
 
     private val distanceToCOM = 0.0    // In m
 
-    // TODO: get a better measurement for maxTorque - this is best case approximation, but motors decline.
-    private val maxTorque = 0.8352    // In N * m
+    // TODO: get a better measurement for maxVelocity - this is high-weight approximation,
+    // TODO: but our robot is likely considerably lighter.
+    private val maxVelocity = 9000    // In degrees / second
 
 
     // Methods
@@ -72,44 +70,50 @@ class SimulatorBot : BotAPI() {
      */
     private fun simulatorCalculation() {
         setAccelFromPower()
-        angularVelocity += angularAcceleration * loopLength / 1000
-        linearVelocity += linearAcceleration * loopLength / 1000
+        // Update current angle with the changes in the last loop
+        this.currentAngle += angularVelocity * loopLength / 1000
+
+        // Translate angle to unit circle and convert to radians
+        val angleInRadians = (-currentAngle + 90) / 360 * Math.PI
+
+        // calculate x component of distance traveled in the last loop
+        yPos += sin(angleInRadians) * (linearVelocity * loopLength)
+
+        // calculate y component of distance traveled in the last loop
+        xPos += cos(angleInRadians) * (linearVelocity * loopLength)
     }
 
     private fun setAccelFromPower() {
-        // Forces exerted perpendicular to ground, all in Newtons
-        val leftForce = maxTorque * leftMotorPower / wheelRadius
-        val rightForce = maxTorque * rightMotorPower / wheelRadius
+        // How fast each side of the robot is moving
+        // TODO: This calculation is wrong but I gotta get to class
+        val leftLinearVelocity = maxVelocity * leftMotorPower / wheelRadius
+        val rightLinearVelocity = maxVelocity * rightMotorPower / wheelRadius
 
-        if (leftForce == rightForce) {
-            // F = ma, so a = F/m
-            this.linearAcceleration = leftForce / massOfRobot
-            adjustAngleFromForce(0.0, false);
+        if (leftLinearVelocity == rightLinearVelocity) {
+            // If velocity is the same, no rotation, so we'll just go straight
+            this.linearVelocity = leftLinearVelocity
+            adjustAngleFromLinearVelocity(0.0, false);
         } else {
-            val isTurningLeft = rightForce > leftForce;
-            // F = ma, so a = F/m
-            // Take the force that is "common" among both as linear...
-            this.linearAcceleration = (if (isTurningLeft) leftForce else rightForce) / massOfRobot
-            // ...and use the rest as torque.
-            adjustAngleFromForce(
+            val isTurningLeft = rightLinearVelocity > leftLinearVelocity;
+            // Take the velocity that is "common" among both as linear...
+            this.linearVelocity = (if (isTurningLeft) leftLinearVelocity else rightLinearVelocity) / massOfRobot
+            // ...and use the rest as angular velocity.
+            adjustAngleFromLinearVelocity(
                 if (isTurningLeft) {
-                    rightForce - leftForce
+                    rightLinearVelocity - leftLinearVelocity
                 } else {
-                    leftForce - rightForce
+                    leftLinearVelocity - rightLinearVelocity
                 }, isTurningLeft
             )
         }
     }
 
-    private fun adjustAngleFromForce(difference: Double, directionIsLeft: Boolean) {
-        // Moment of inertia for a solid rectangle. TODO: tweak to fit our scenario.
-        val momentOfInertia: Double = massOfRobot * (length.pow(2.0) + width.pow(2.0)) / 12
-
+    private fun adjustAngleFromLinearVelocity(difference: Double, directionIsLeft: Boolean) {
         // Angular acceleration = torque * moment of inertia = force * radius * moment of inertia
-        angularAcceleration = if (directionIsLeft) {
-            difference * distanceToCOM / momentOfInertia
+        angularVelocity = if (directionIsLeft) {
+            difference * distanceToCOM
         } else {
-            -difference * distanceToCOM / momentOfInertia
+            -difference * distanceToCOM
         }
     }
 }
