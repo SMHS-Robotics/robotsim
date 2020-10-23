@@ -1,1 +1,0 @@
-/home/akishore/robotsim/codesource/build/classes/kotlin/main/BotAPI.class:/home/akishore/robotsim/codesource/build/classes/kotlin/main/MainKt.class:/home/akishore/robotsim/codesource/build/classes/kotlin/main/SimulatorBot.class
