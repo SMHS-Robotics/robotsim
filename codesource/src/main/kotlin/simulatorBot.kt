@@ -27,15 +27,11 @@ class SimulatorBot : BotAPI() {
     // ---
 
 
-    private val loopLength: Long = 100    // In ms.
+    private val loopLength: Long = 20    // In ms.
 
     private val wheelRadius = 0.0    // In m
 
     private val massOfRobot = 0.0    // In kg
-
-    private val length = 0.0    // In m
-
-    private val width = 0.0    // In m
 
     private val distanceToCOM = 0.0    // In m
 
@@ -85,9 +81,8 @@ class SimulatorBot : BotAPI() {
 
     private fun setAccelFromPower() {
         // How fast each side of the robot is moving
-        // TODO: This calculation is wrong but I gotta get to class
-        val leftLinearVelocity = maxVelocity * leftMotorPower / wheelRadius
-        val rightLinearVelocity = maxVelocity * rightMotorPower / wheelRadius
+        val leftLinearVelocity = maxVelocity * leftMotorPower * Math.PI * wheelRadius * 2 / 360
+        val rightLinearVelocity = maxVelocity * rightMotorPower  * Math.PI * wheelRadius * 2 / 360
 
         if (leftLinearVelocity == rightLinearVelocity) {
             // If velocity is the same, no rotation, so we'll just go straight
