@@ -52,3 +52,4 @@ abstract class BotAPI {
         rightMotorPower = rightFront
     }
 }
+
