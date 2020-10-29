@@ -1,6 +1,10 @@
 import kotlinx.coroutines.*
 import kotlin.math.*
 
+/**
+ * An extension of BotAPI that is designed to simulate the physics of the robot
+ * It runs a thread that will update the variables that represent physical components
+ */
 class SimulatorBot : BotAPI() {
     private var coroutine: Job? = null
 
@@ -13,11 +17,12 @@ class SimulatorBot : BotAPI() {
     private var linearVelocity: Double = 0.0
 
     // In m
-    private var xPos: Double = 0.0
+    var xPos: Double = 0.0
 
     // In m
-    private var yPos: Double = 0.0
+    var yPos: Double = 0.0
 
+    // In deg / sec
     private var angularVelocity = 0.0
 
 
@@ -25,17 +30,22 @@ class SimulatorBot : BotAPI() {
     // ---
 
 
-    private val loopLength: Long = 20    // In ms.
+    // Length of the calculation loop, controls how much time between update of physical variables.
+    private val loopLength: Long = 200    // In ms
 
-    private val wheelRadius = 0.0    // In m
+    // I'm not going to bother documenting this.
+    private val wheelRadius = 0.0508    // In m
 
-    private val massOfRobot = 0.0    // In kg
+    // Patty daddy will take points off if this is weight. You must measure it without gravity. x=-b+-sqrt(b^2-4ac)/2a
+    private val massOfRobot = 5.0    // In kg
 
-    private val distanceToCOM = 0.0    // In m
+    // Avg. distance from edge to center of mass
+    private val distanceToCOM = 0.1524    // In m
 
-    // TODO: get a better measurement for maxVelocity - this is high-weight approximation,
-    // TODO: but our robot is likely considerably lighter.
-    private val maxVelocity = 9000    // In degrees / second
+    // TODO: get a better measurement for maxVelocity - this is high-power approximation,
+    // TODO: but our robot is likely considerably different.
+    // Maximum speed that the wheel can rotate
+    private val maxVelocityOfWheels = 9000    // In degrees / second (9000 ~ 2.5 rotations / second)
 
 
     // Methods
@@ -55,6 +65,9 @@ class SimulatorBot : BotAPI() {
         }
     }
 
+    /**
+     * Terminates the thread that updates the robot
+     */
     fun killRobot() {
         coroutine!!.cancel()
     }
@@ -63,7 +76,8 @@ class SimulatorBot : BotAPI() {
      * Content of each loop of simulation
      */
     private fun simulatorCalculation() {
-        setAccelFromPower()
+        setVelFromPower()
+
         // Update current angle with the changes in the last loop
         this.currentAngle += angularVelocity * loopLength / 1000
 
@@ -71,26 +85,29 @@ class SimulatorBot : BotAPI() {
         val angleInRadians = (-currentAngle + 90) / 360 * Math.PI
 
         // calculate x component of distance traveled in the last loop
-        yPos += sin(angleInRadians) * (linearVelocity * loopLength)
+        yPos += sin(angleInRadians) * (linearVelocity * loopLength / 1000)
 
         // calculate y component of distance traveled in the last loop
-        xPos += cos(angleInRadians) * (linearVelocity * loopLength)
+        xPos += cos(angleInRadians) * (linearVelocity * loopLength / 1000)
     }
 
-    private fun setAccelFromPower() {
-        // How fast each side of the robot is moving
-        val leftLinearVelocity = maxVelocity * leftMotorPower * Math.PI * wheelRadius * 2 / 360
-        val rightLinearVelocity = maxVelocity * rightMotorPower * Math.PI * wheelRadius * 2 / 360
+    /**
+     * Based on the power of the wheels, updates the velocity of the robot
+     */
+    private fun setVelFromPower() {
+        // How fast each side of the robot is moving in meters per second
+        val leftLinearVelocity = maxVelocityOfWheels / 360 * leftMotorPower * Math.PI * wheelRadius * 2
+        val rightLinearVelocity = maxVelocityOfWheels / 360 * rightMotorPower * Math.PI * wheelRadius * 2
 
         if (leftLinearVelocity == rightLinearVelocity) {
             // If velocity is the same, no rotation, so we'll just go straight
             this.linearVelocity = leftLinearVelocity
-            adjustAngleFromLinearVelocity(0.0, false);
+            adjustAngleFromLinearVelocity(0.0);
         } else {
             val isTurningLeft = rightLinearVelocity > leftLinearVelocity;
             val differenceBetween = abs(leftLinearVelocity - rightLinearVelocity)
             // Take the velocity that is "common" among both as linear velocity, unless one is opposite direction,
-            // in which case we assume that the robot has no linear
+            // in which case we assume that the robot has no linear velocity.
             this.linearVelocity =
                 (if (differenceBetween < max(abs(leftLinearVelocity), abs(rightLinearVelocity))) {
                     if (isTurningLeft) {
@@ -103,21 +120,12 @@ class SimulatorBot : BotAPI() {
                 }) / massOfRobot
             // ...and use the rest as angular velocity.
             adjustAngleFromLinearVelocity(
-                if (isTurningLeft) {
-                    rightLinearVelocity - leftLinearVelocity
-                } else {
-                    leftLinearVelocity - rightLinearVelocity
-                }, isTurningLeft
+                rightLinearVelocity-leftLinearVelocity
             )
         }
     }
 
-    private fun adjustAngleFromLinearVelocity(difference: Double, directionIsLeft: Boolean) {
-        // Angular acceleration = torque * moment of inertia = force * radius * moment of inertia
-        angularVelocity = if (directionIsLeft) {
-            difference * distanceToCOM
-        } else {
-            -difference * distanceToCOM
-        }
+    private fun adjustAngleFromLinearVelocity(difference: Double) {
+        angularVelocity = -difference * distanceToCOM / Math.PI * 180
     }
 }
