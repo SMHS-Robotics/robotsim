@@ -6,22 +6,25 @@ import kotlinx.coroutines.delay
  */
 suspend fun main(args: Array<String>) {
     // disclaimer: this code does NOT translate exactly to physical code
-    // examine comments to see the (minor) differences.
     val sim = SimulatorBot()
     sim.start()
-    val bot : BotAPI = sim
+    val bot : SimulatorBot = sim
 
-    // Update for test
+    // Take a slight path left
     bot.leftMotorPower = 1.0
-    bot.rightMotorPower = 0.5
-    delay(2500L)
-    bot.leftMotorPower = 0.5
-    bot.rightMotorPower = 0.2
-    delay(2500L)
-    bot.leftMotorPower = 0.3
-    bot.rightMotorPower = 0.3
-    delay(2500L)
-    println(sim.currentAngle)
-    println(sim.xPos)
-    println(sim.yPos)
+    bot.rightMotorPower = 0.90
+
+    delay(4000L)
+
+    // Spin in place until we're horizontal (90 deg)
+    bot.leftMotorPower = 0.8
+    bot.rightMotorPower = -0.8
+    while (bot.angleInRadians > 0) delay(20L)
+
+    // Go straight for a bit
+    bot.rightMotorPower = 0.8
+    delay(2000L)
+    bot.killRobot()
+
+    buildGraph(xPos = bot.listPosX, yPos = bot.listPosY)
 }

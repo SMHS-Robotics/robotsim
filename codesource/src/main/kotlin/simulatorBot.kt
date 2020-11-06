@@ -4,9 +4,13 @@ import kotlin.math.*
 /**
  * An extension of BotAPI that is designed to simulate the physics of the robot
  * It runs a thread that will update the variables that represent physical components
+ *
+ * graphBuilder.kt can generate a graph based on this data using [buildGraph].
  */
 class SimulatorBot : BotAPI() {
     private var coroutine: Job? = null
+    var listPosX = mutableListOf<Double>();
+    var listPosY = mutableListOf<Double>();
 
 
     // Mutable, self-changed variables.
@@ -31,12 +35,15 @@ class SimulatorBot : BotAPI() {
 
 
     // Length of the calculation loop, controls how much time between update of physical variables.
-    private val loopLength: Long = 200    // In ms
+    private val loopLength: Long = 20    // In ms
+
+    // Rate of text refresh (di splaying statistics) *multiple of loop length*
+    private val screenRefresh: Long = 500   // In ms
 
     // I'm not going to bother documenting this.
     private val wheelRadius = 0.0508    // In m
 
-    // Patty daddy will take points off if this is weight. You must measure it without gravity. x=-b+-sqrt(b^2-4ac)/2a
+    // Patty daddy will take points off if this is weight. You must measure it without gravity.
     private val massOfRobot = 5.0    // In kg
 
     // Avg. distance from edge to center of mass
@@ -45,8 +52,9 @@ class SimulatorBot : BotAPI() {
     // TODO: get a better measurement for maxVelocity - this is high-power approximation,
     // TODO: but our robot is likely considerably different.
     // Maximum speed that the wheel can rotate
-    private val maxVelocityOfWheels = 9000    // In degrees / second (9000 ~ 2.5 rotations / second)
+    private val maxVelocityOfWheels = 6000    // In degrees / second (9000 ~ 2.5 rotations / second)
 
+    var angleInRadians = Math.PI/2;
 
     // Methods
     // ---
@@ -58,9 +66,15 @@ class SimulatorBot : BotAPI() {
      */
     fun start() {
         coroutine = GlobalScope.launch {
+            var stopwatch: Long = 0;
             while (true) {
                 simulatorCalculation()
+                listPosX.add(xPos)
+                listPosY.add(yPos)
+
+                if (stopwatch % screenRefresh == 0L) print("\r y: ${yPos}, x: $xPos, deg: $currentAngle")
                 delay(loopLength)
+                stopwatch += loopLength
             }
         }
     }
@@ -82,7 +96,7 @@ class SimulatorBot : BotAPI() {
         this.currentAngle += angularVelocity * loopLength / 1000
 
         // Translate angle to unit circle and convert to radians
-        val angleInRadians = (-currentAngle + 90) / 360 * Math.PI
+        this.angleInRadians = (-currentAngle + 90) / 180 * Math.PI
 
         // calculate x component of distance traveled in the last loop
         yPos += sin(angleInRadians) * (linearVelocity * loopLength / 1000)
